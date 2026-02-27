@@ -23,6 +23,12 @@ export type MediaPlayerInitResult =
 	| {type: 'no-tracks'}
 	| {type: 'disposed'};
 
+type StoredInput = {
+	src: string;
+	input: Input<UrlSource>;
+};
+
+let StoredInputs: StoredInput[] = [];
 export class MediaPlayer {
 	private canvas: HTMLCanvasElement | OffscreenCanvas | null;
 	private context:
@@ -129,10 +135,17 @@ export class MediaPlayer {
 		this.onVideoFrameCallback = onVideoFrameCallback;
 		this.playing = playing;
 
-		this.input = new Input({
-			source: new UrlSource(this.src),
-			formats: ALL_FORMATS,
-		});
+		let StoredInput = StoredInputs.find((input) => input.src === this.src);
+		if (StoredInput) {
+			this.input = StoredInput.input;
+		} else {
+			let newInput = new Input({
+				source: new UrlSource(this.src),
+				formats: ALL_FORMATS,
+			});
+			this.input = newInput;
+			StoredInputs.push({input: newInput, src: this.src});
+		}
 
 		if (canvas) {
 			const context = canvas.getContext('2d', {
@@ -619,7 +632,6 @@ export class MediaPlayer {
 		this.nonceManager.createAsyncOperation();
 		this.videoIteratorManager?.destroy();
 		this.audioIteratorManager?.destroyIterator();
-		this.input.dispose();
 	}
 
 	private scheduleAudioNode = (
